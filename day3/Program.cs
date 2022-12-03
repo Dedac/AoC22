@@ -2,27 +2,22 @@
 {
     private static void Day(string[] args)
     {
-        int sum = 0;
-        int sumBadges = 0;
-        var priority = (char c) => (c - 'a' + 1 > 0) ? 
-                                        (c - 'a' + 1) 
-                                      : (c - 'A' + 27);
+        var priority = (char c) => (c - 'a' + 1 > 0) ? (c - 'a' + 1) : (c - 'A' + 27);
+        //pt 1
+        var common = (char[] sack) => sack[00..(sack.Length / 2)]
+                                        .Intersect(sack[(sack.Length / 2)..])
+                                        .First();
+        Console.WriteLine(File.ReadLines(args[0])
+                                .Select(line => priority(common(line.ToCharArray())))
+                                .Sum());
 
-        var lines = File.ReadLines(args[0])
-                        .Select(l => l.ToCharArray())
-                        .ToArray();
-        for (int i = 0; i < lines.Length; i++)
-        {
-            sum += priority(lines[i][00..(lines[i].Length / 2)]
-                    .Intersect(lines[i][(lines[i].Length / 2)..])
-                    .First());
-            if (i % 3 == 2)
-                sumBadges += priority(lines[i]
-                    .Intersect(lines[i - 1])
-                    .Intersect(lines[i - 2])
-                    .First());
-        }
-        Console.WriteLine(sum);
-        Console.WriteLine(sumBadges);
+        //pt 2
+        var badge = (IEnumerable<char[]> group) => group.First()
+                                                    .Intersect(group.Skip(1).First())
+                                                    .Intersect(group.Skip(2).First())
+                                                    .First();
+        Console.WriteLine(File.ReadLines(args[0]).Chunk(3)
+                                .Select(lines => priority(badge(lines.Select(l => l.ToCharArray()))))
+                                .Sum());
     }
 }
