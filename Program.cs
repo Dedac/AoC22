@@ -1,21 +1,13 @@
-﻿var lines = File.ReadLines(args[0]);
-var sum = 0;
-foreach (var line in lines)
+﻿int sum = 0;
+int sumBadges = 0;
+var priority = (char c) => (c - 'a' + 1 > 0) ? (c - 'a' + 1) : (c - 'A' + 27);
+
+var lines = File.ReadLines(args[0]).Select(l => l.ToCharArray()).ToArray();
+for (int i = 0; i< lines.Length; i++)
 {
-    var g = line.Split(" ");
-    if (g[1] == "X") {
-        if (g[0] == "A") sum += 3;
-        else if (g[0] == "B") sum += 1;
-        else sum += 2; //C
-    }
-    else if (g[1] == "Y") { 
-        sum += 3 + g[0].First() - 64; // Yay char math!
-    }
-    else { //"Z"
-        if (g[0] == "A") sum += 2;
-        else if (g[0] == "B") sum += 3;
-        else sum += 1; //C
-        sum += 6;
-    }
+    sum += priority(lines[i][00..(lines[i].Length / 2)].Intersect(lines[i][(lines[i].Length / 2)..]).First());
+    if (i % 3 == 2)
+            sumBadges += priority(lines[i].Intersect(lines[i-1]).Intersect(lines[i-2]).First());
 }
 Console.WriteLine(sum);
+Console.WriteLine(sumBadges);

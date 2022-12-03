@@ -1,6 +1,6 @@
 ﻿internal class Day2 
 {
-    private static void Main(string[] args)
+    private static void Two(string[] args)
     {
         var lines = File.ReadLines(args[0]);
         var sum = 0;
