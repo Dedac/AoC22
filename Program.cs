@@ -1,17 +1,21 @@
-﻿var priority = (char c) => (c - 'a' + 1 > 0) ? (c - 'a' + 1) : (c - 'A' + 27);
-//pt 1
-var common = (char[] sack) => sack[00..(sack.Length / 2)]
-                                .Intersect(sack[(sack.Length / 2)..])
-                                .First();
-Console.WriteLine(File.ReadLines(args[0])
-                        .Select(line => priority(common(line.ToCharArray())))
-                        .Sum());
+﻿var range = (string s) => { 
+    var n = s.Split('-').Select(a => int.Parse(a)).ToArray();
+    return Enumerable.Range(n[0], n[1] - n[0] + 1); 
+    };
 
-//pt 2
-var badge = (IEnumerable<char[]> group) => group.First()
-                                            .Intersect(group.Skip(1).First())
-                                            .Intersect(group.Skip(2).First())
-                                            .First() ;
-Console.WriteLine(File.ReadLines(args[0]).Chunk(3)
-                        .Select(lines => priority(badge(lines.Select(l => l.ToCharArray()))))
-                        .Sum()); 
+//pt1
+var contained = (string[] sectionPair) => {
+    var ranges = sectionPair.Select(p => range(p)).ToArray();
+    var i = ranges[0].Intersect(ranges[1]);
+    return i.SequenceEqual(ranges[0]) || i.SequenceEqual(ranges[1]);
+};
+
+//pt2 
+var overlaps = (string[] sectionPair) => {
+    var ranges = sectionPair.Select(p => range(p)).ToArray();
+    return ranges[0].Intersect(ranges[1]).Any();
+};
+
+Console.WriteLine(
+    File.ReadLines(args[0]).Select(s => overlaps(s.Split(",")) ? 1:0).Sum()
+);
