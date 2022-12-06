@@ -1,21 +1,19 @@
-﻿var range = (string s) => { 
-    var n = s.Split('-').Select(a => int.Parse(a)).ToArray();
-    return Enumerable.Range(n[0], n[1] - n[0] + 1); 
-    };
+﻿var boxRows = File.ReadLines(args[0])
+                .TakeWhile(s => !s.StartsWith(" "))
+                .Select(s => s.Chunk(4).Select(s => s[1]).ToArray());
 
-//pt1
-var contained = (string[] sectionPair) => {
-    var ranges = sectionPair.Select(p => range(p)).ToArray();
-    var i = ranges[0].Intersect(ranges[1]);
-    return i.SequenceEqual(ranges[0]) || i.SequenceEqual(ranges[1]);
-};
+var stacks = new string[boxRows.Last().Length];
+for (int i = 0; i < boxRows.Last().Length; i++)
+    stacks[i] = (new string(boxRows.Select(b => b[i]).ToArray())).Trim();
 
-//pt2 
-var overlaps = (string[] sectionPair) => {
-    var ranges = sectionPair.Select(p => range(p)).ToArray();
-    return ranges[0].Intersect(ranges[1]).Any();
-};
+File.ReadLines(args[0]).SkipWhile(s => !s.StartsWith("move"))
+        .Select(s => s.Split(' ').Chunk(2).Select(w => int.Parse(w[1]) - 1).ToArray())
+        .All(m =>
+        {
+            var boxes = stacks[m[1]].Substring(0, m[0] + 1);
+            stacks[m[1]] = stacks[m[1]].Substring(m[0] + 1);
+            stacks[m[2]] = boxes + stacks[m[2]];
+            return true;
+        });
 
-Console.WriteLine(
-    File.ReadLines(args[0]).Select(s => overlaps(s.Split(",")) ? 1:0).Sum()
-);
+Console.WriteLine(string.Join('\n', stacks));
