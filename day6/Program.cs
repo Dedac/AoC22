@@ -3,8 +3,15 @@
     private static void Day(string[] args)
     {
         var signal = File.ReadAllText(args[0]);
-        for (int i = 0; i < signal.Length; i++)
-            if (signal.Skip(i).Take(14).Distinct().Count() == 14)
-                Console.WriteLine(i + 14);
+
+        var getIndex = (int size) =>
+        {
+            for (int i = size; i < signal.Length; i++)
+                if (signal[(i - size)..i].Distinct().Count() == size)
+                    return i;
+            return -1;
+        };
+        Console.WriteLine(getIndex(4));
+        Console.WriteLine(getIndex(14));
     }
 }
