@@ -1,33 +1,25 @@
-﻿internal class Day8 
+﻿internal class Day8
 {
     private static void Day(string[] args)
     {
-        var treeMatrix = File.ReadLines(args[0])
-    .Select(l => l.Select(c => c - '0').ToArray()).ToArray();
-
-        var treeIsVisible = (int i, int j) =>
-                    i == 0 || j == 0
-                    || i == treeMatrix.Length - 1 || j == treeMatrix[i].Length - 1
-                    || !treeMatrix[..i].Select(a => a[j]).Any(t => t >= treeMatrix[i][j])
-                    || !treeMatrix[(i + 1)..].Select(a => a[j]).Any(t => t >= treeMatrix[i][j])
-                    || !treeMatrix[i][..j].Any(t => t >= treeMatrix[i][j])
-                    || !treeMatrix[i][(j + 1)..].Any(t => t >= treeMatrix[i][j]);
-
-        var ScenicScore = (int i, int j) =>
-            treeMatrix[..i].Select(a => a[j]).Reverse().TakeUntil(t => t < treeMatrix[i][j]).Count() *
-            treeMatrix[(i + 1)..].Select(a => a[j]).TakeUntil(t => t < treeMatrix[i][j]).Count() *
-            treeMatrix[i][..j].Reverse().TakeUntil(t => t < treeMatrix[i][j]).Count() *
-            treeMatrix[i][(j + 1)..].TakeUntil(t => t < treeMatrix[i][j]).Count();
-
+        var treeMatrix = File.ReadLines(args[0]) //read the trees into an int 'matrix'
+            .Select(l => l.Select(c => c - '0').ToArray()).ToArray();
         int visibleTrees = 0;
         int maxScenicScore = 0;
-        for (int i = 0; i < treeMatrix.Length; i++)
-            for (int j = 0; j < treeMatrix[i].Length; j++)
-            {
-                if (treeIsVisible(i, j)) visibleTrees++;
-                maxScenicScore = Math.Max(maxScenicScore, ScenicScore(i, j));
+        for (int i = 0; i < treeMatrix.Length; i++) //rows
+            for (int j = 0; j < treeMatrix[i].Length; j++) //colums
+            {   //look out from this tree
+                var viewsFromTree = new List<IEnumerable<int>>() {
+                            treeMatrix[..i].Select(a => a[j]).Reverse(), //up
+                            treeMatrix[(i + 1)..].Select(a => a[j]), //down
+                            treeMatrix[i][..j].Reverse(), //left
+                            treeMatrix[i][(j + 1)..] }; //right
+                                                        // Check each direction to see if there are not any same or taller trees
+                if (viewsFromTree.Any(v => !v.Any(t => t >= treeMatrix[i][j]))) visibleTrees++;
+                // Multiply views from each direction, and select the max
+                maxScenicScore = Math.Max(maxScenicScore,
+                    viewsFromTree.Aggregate(1, (c, v) => c * v.TakeUntil(t => t < treeMatrix[i][j]).Count()));
             }
-
         Console.WriteLine(visibleTrees);
         Console.WriteLine(maxScenicScore);
     }
