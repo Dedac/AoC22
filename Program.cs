@@ -1,25 +1,28 @@
-﻿var dirSizes = new Dictionary<string, int>() { { "//", 0 } };
-var cd = "";
+﻿var treeMatrix = File.ReadLines(args[0])
+    .Select(l => l.Select(c => c - '0').ToArray()).ToArray();
 
-void addSize(string dir, int size)
-{
-    dirSizes[dir] += size;
-    if (dir.Length > 2) addSize(dir.Remove(dir.LastIndexOf('/')), size);
-};
+var treeIsVisible = (int i, int j) =>
+            i == 0 || j == 0
+            || i == treeMatrix.Length - 1 || j == treeMatrix[i].Length - 1
+            || !treeMatrix[..i].Select(a => a[j]).Any(t => t >= treeMatrix[i][j])
+            || !treeMatrix[(i + 1)..].Select(a => a[j]).Any(t => t >= treeMatrix[i][j])
+            || !treeMatrix[i][..j].Any(t => t >= treeMatrix[i][j])
+            || !treeMatrix[i][(j + 1)..].Any(t => t >= treeMatrix[i][j]);
 
-foreach (var line in File.ReadLines(args[0]))
-{
-    if (line.StartsWith("$ cd"))
+var ScenicScore = (int i, int j) =>
+    treeMatrix[..i].Select(a => a[j]).Reverse().TakeUntil(t => t < treeMatrix[i][j]).Count() *
+    treeMatrix[(i + 1)..].Select(a => a[j]).TakeUntil(t => t < treeMatrix[i][j]).Count() *
+    treeMatrix[i][..j].Reverse().TakeUntil(t => t < treeMatrix[i][j]).Count() *
+    treeMatrix[i][(j + 1)..].TakeUntil(t => t < treeMatrix[i][j]).Count();
+
+int visibleTrees = 0;
+int maxScenicScore = 0;
+for (int i = 0; i < treeMatrix.Length; i++)
+    for (int j = 0; j < treeMatrix[i].Length; j++)
     {
-        if (line.Substring(5) == "..")
-            cd = cd.Remove(cd.LastIndexOf('/'));
-        else
-            cd += "/" + line.Substring(5);
+        if (treeIsVisible(i, j)) visibleTrees++;
+        maxScenicScore = Math.Max(maxScenicScore, ScenicScore(i, j));
     }
-    else if (line.StartsWith("dir"))
-        dirSizes.Add($"{cd}/{line.Substring(4)}", 0);
-    else if (!line.StartsWith('$'))
-        addSize(cd, int.Parse(line.Split(' ')[0]));
-}
-Console.WriteLine(dirSizes.Skip(1).Sum(dir => dir.Value <= 100000 ? dir.Value : 0));
-Console.WriteLine(dirSizes.Where(d => d.Value > dirSizes["//"] - 40000000).OrderBy(v => v.Value).First().Value);
+
+Console.WriteLine(visibleTrees);
+Console.WriteLine(maxScenicScore);
