@@ -7,7 +7,7 @@
         int visibleTrees = 0;
         int maxScenicScore = 0;
         for (int i = 0; i < treeMatrix.Length; i++) //rows
-            for (int j = 0; j < treeMatrix[i].Length; j++) //colums
+            for (int j = 0; j < treeMatrix[i].Length; j++) //columns
             {   //look out from this tree
                 var viewsFromTree = new List<IEnumerable<int>>() {
                             treeMatrix[..i].Select(a => a[j]).Reverse(), //up
