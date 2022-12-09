@@ -1,8 +1,4 @@
-﻿var Rope = new (int, int)[10];
-var visits = new List<(int, int)> { (0, 0) };
-var visits10 = new List<(int, int)> { (0, 0) };
-
-var move = new Dictionary<string, Func<(int, int), (int, int)>>(){
+﻿var move = new Dictionary<string, Func<(int, int), (int, int)>>(){
     {"R", (t) => (t.Item1 + 1, t.Item2)},
     {"L", (t) => (t.Item1 - 1, t.Item2)},
     {"U", (t) => (t.Item1, t.Item2 + 1)},
@@ -20,16 +16,20 @@ var follow = ((int, int) Leader, (int, int) Follows) =>
     return Follows;
 };
 
-foreach (var line in File.ReadLines(args[0]).Select(l => l.Split(' ')))
+var distance = (int length) =>
 {
-    foreach (var dir in Enumerable.Repeat(line[0],int.Parse(line[1])))
+    var rope = new (int, int)[length];
+    var visits = File.ReadLines(args[0]).Select(l => l.Split(' '))
+        .SelectMany(l => Enumerable.Repeat(l[0], int.Parse(l[1])))
+        .Aggregate(new List<(int, int)>(), (vis, dir) =>
     {
-        Rope[0] = move[dir](Rope[0]);
-        for (int i = 1; i<10; i++) Rope[i] = follow(Rope[i-1],Rope[i]);
-        if (!visits.Contains(Rope[1])) visits.Add(Rope[1]);
-        if (!visits10.Contains(Rope[9])) visits10.Add(Rope[9]);
-    }
-}
+        rope[0] = move[dir](rope[0]);
+        for (int i = 1; i < length; i++) rope[i] = follow(rope[i - 1], rope[i]);
+        if (!vis.Contains(rope.Last())) vis.Add(rope.Last());
+        return vis;
+    });
+    return visits.Count();
+};
 
-Console.WriteLine(visits.Count());
-Console.WriteLine(visits10.Count());
+Console.WriteLine(distance(2));
+Console.WriteLine(distance(10));
