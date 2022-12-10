@@ -1,35 +1,20 @@
-﻿var move = new Dictionary<string, Func<(int, int), (int, int)>>(){
-    {"R", (t) => (t.Item1 + 1, t.Item2)},
-    {"L", (t) => (t.Item1 - 1, t.Item2)},
-    {"U", (t) => (t.Item1, t.Item2 + 1)},
-    {"D", (t) => (t.Item1, t.Item2 - 1)}
-};
-
-var follow = ((int, int) Leader, (int, int) Follows) =>
+﻿var cycle = 0;
+var incCycle = ((int,int) acc) => 
 {
-    var d = (Leader.Item1 - Follows.Item1, Leader.Item2 - Follows.Item2);
-    if (Math.Abs(d.Item1) > 1 || Math.Abs(d.Item2) > 1)
+    if (cycle % 40 == 0) Console.WriteLine();
+    Console.Write((Enumerable.Range(acc.Item1-1,3)).Contains(cycle % 40) ? '#' : '.');
+    cycle++;
+    if ((cycle-20) % 40 == 0) acc.Item2 += acc.Item1*cycle;
+    return acc;
+};
+var val = File.ReadLines(args[0]).Select(l => l.Split(" "))
+        .Aggregate((1,0), (acc, line) => {
+    acc = incCycle(acc);
+    if (line[0]=="addx")
     {
-        if (d.Item1 != 0) Follows = move[Leader.Item1 < Follows.Item1 ? "L" : "R"](Follows);
-        if (d.Item2 != 0) Follows = move[Leader.Item2 > Follows.Item2 ? "U" : "D"](Follows);
+        acc = incCycle(acc);
+        acc.Item1 += int.Parse(line[1]);
     }
-    return Follows;
-};
-
-var distance = (int length) =>
-{
-    var rope = new (int, int)[length];
-    var visits = File.ReadLines(args[0]).Select(l => l.Split(' '))
-        .SelectMany(l => Enumerable.Repeat(l[0], int.Parse(l[1])))
-        .Aggregate(new List<(int, int)>(), (vis, dir) =>
-    {
-        rope[0] = move[dir](rope[0]);
-        for (int i = 1; i < length; i++) rope[i] = follow(rope[i - 1], rope[i]);
-        if (!vis.Contains(rope.Last())) vis.Add(rope.Last());
-        return vis;
-    });
-    return visits.Count();
-};
-
-Console.WriteLine(distance(2));
-Console.WriteLine(distance(10));
+    return acc;
+});
+Console.WriteLine(val.Item2);
