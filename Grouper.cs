@@ -12,6 +12,7 @@ public static class Grouper
             else
                 outputSet.Add(item);
         }
+        yield return outputSet;
     }
     public static IEnumerable<T> TakeUntil<T>(this IEnumerable<T> source, Func<T, bool> predicate)
     {
