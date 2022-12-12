@@ -1,46 +1,74 @@
-﻿var rounds = 10000;
-var execOp = (string[] op, long val) =>
-{
-    var a = op[3] == "old" ? val : long.Parse(op[3]);
-    var b = op[5] == "old" ? val : long.Parse(op[5]);
-    return op[4] == "+" ? a + b : a * b;
-};
+﻿var start = (0, 0);
+var end = (0, 0);
+var routes = new Dictionary<(int, int), List<(int, int)>>();
+var score = new Dictionary<(int, int), (int, int)>();
+var starts = new List<(int, int)>();
+var map = File.ReadLines(args[0]).Select(l => l.Select(c => c - 'a').ToArray()).ToArray();
 
-var monkeys = File.ReadLines(args[0]).SplitBy(s => s == "")
-            .Select(lines => lines.Select(l => l.Split(':')[1]).ToArray())
-            .Select(m => new Monkey()
-            {
-                Items = m[1].Split(',').Select(s => long.Parse(s)).ToList(),
-                Op = (m[2].Split(' ')),
-                Test = long.Parse(m[3].Split(' ').Last()),
-                MTrue = int.Parse(m[4].Split(' ').Last()),
-                MFalse = int.Parse(m[5].Split(' ').Last())
-            }).ToList();
+var directions = ((int, int) p) => new List<(int, int)>
+            { (p.Item1 + 1, p.Item2),
+              (p.Item1 - 1, p.Item2),
+              (p.Item1, p.Item2 + 1),
+              (p.Item1, p.Item2 - 1)}
+              .Where(d => d.Item1 >= 0 && d.Item1 < map.Length && d.Item2 >= 0 && d.Item2 < map[0].Length);
 
-var worryLCM = monkeys.Aggregate((long)1, (x, m) => x * m.Test);
-for (int i = 0; i < rounds; i++)
+for (int i = 0; i < map.Length; i++)
 {
-    for (int j = 0; j < monkeys.Count; j++)
+    for (int j = 0; j < map[0].Length; j++)
     {
-        foreach (var item in monkeys[j].Items)
+        if (map[i][j] == 'S' - 'a')
         {
-            monkeys[j].Inspections++;
-            var worry = execOp(monkeys[j].Op, item) % worryLCM;
-            var toMonkey = worry % monkeys[j].Test == 0 ? monkeys[j].MTrue : monkeys[j].MFalse;
-            monkeys[toMonkey].Items.Add(worry);
+            start = (i, j);
+            map[i][j] = 0;
         }
-        monkeys[j].Items = new List<long>();
+        else if (map[i][j] == 'E' - 'a')
+        {
+            end = (i, j);
+            map[i][j] = 'z' - 'a';
+        }
+        if (map[i][j] == 0) starts.Add((i, j));
+
+        routes.Add((i, j), directions((i, j)).Where(d => map[d.Item1][d.Item2] <= map[i][j] + 1).ToList());
+        score.Add((i, j), (int.MaxValue, int.MaxValue));
     }
 }
-Console.WriteLine(string.Join(",", monkeys.Select(m => m.Inspections)));
-Console.WriteLine(monkeys.OrderByDescending(m => m.Inspections).Take(2)
-                         .Aggregate(1, (long v, Monkey m) => m.Inspections * v));
-class Monkey
+var distanceGuess = ((int, int) n) => Math.Abs(end.Item1 - n.Item1) + Math.Abs(end.Item2 - n.Item2);
+
+var getBestPathLength = ((int, int) start) =>
 {
-    public List<long> Items = new List<long>();
-    public string[] Op = new string[0];
-    public long Test;
-    public int MTrue;
-    public int MFalse;
-    public int Inspections;
-}
+    foreach (var s in score) score[s.Key] = (int.MaxValue, int.MaxValue);
+    var from = new Dictionary<(int, int), (int, int)>();
+
+    var consider = new List<(int, int)>() { start };
+    score[start] = (0, distanceGuess(start));
+
+    //Do A*
+    while (consider.Count() != 0)
+    {
+        var curr = consider.OrderBy(c => score[c].Item2).First();
+        if (curr == end) // we made it
+        {
+            var length = 1;
+            while (from.Keys.Contains(curr))
+            {
+                curr = from[curr];
+                length++;
+            }
+            return length + 1;
+        }
+        consider.Remove(curr);
+        foreach (var dir in routes[curr])
+        {
+            var newScore = score[curr].Item1 + 1;
+            if (newScore < score[dir].Item1)
+            {
+                from[dir] = curr;
+                score[dir] = (newScore, newScore + distanceGuess(dir));
+                if (!consider.Contains(dir)) consider.Add(dir);
+            }
+        }
+    }
+    return int.MaxValue;
+};
+Console.WriteLine(getBestPathLength(start));
+Console.WriteLine(starts.Select(s => getBestPathLength(s)).OrderBy(a => a).First());
