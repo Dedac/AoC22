@@ -1,74 +1,85 @@
-﻿var start = (0, 0);
-var end = (0, 0);
-var routes = new Dictionary<(int, int), List<(int, int)>>();
-var score = new Dictionary<(int, int), (int, int)>();
-var starts = new List<(int, int)>();
-var map = File.ReadLines(args[0]).Select(l => l.Select(c => c - 'a').ToArray()).ToArray();
-
-var directions = ((int, int) p) => new List<(int, int)>
-            { (p.Item1 + 1, p.Item2),
-              (p.Item1 - 1, p.Item2),
-              (p.Item1, p.Item2 + 1),
-              (p.Item1, p.Item2 - 1)}
-              .Where(d => d.Item1 >= 0 && d.Item1 < map.Length && d.Item2 >= 0 && d.Item2 < map[0].Length);
-
-for (int i = 0; i < map.Length; i++)
+﻿Packet Build(string s)
 {
-    for (int j = 0; j < map[0].Length; j++)
+    Packet? c = null;
+    var num = "";
+    for (int i = 0; i < s.Length; i++)
     {
-        if (map[i][j] == 'S' - 'a')
+        if (s[i] == '[')
         {
-            start = (i, j);
-            map[i][j] = 0;
+            var np = new Packet() { Parent = c };
+            c = np;
         }
-        else if (map[i][j] == 'E' - 'a')
+        else if (s[i] == ']' || s[i] == ',')
         {
-            end = (i, j);
-            map[i][j] = 'z' - 'a';
+            if (num != "")
+            {
+                c?.Packets.Add(new Packet() { Parent = c, Value = int.Parse(num), Position=c?.Packets.Count()});
+                num = "";
+            }
+            if (s[i] == ']' && c?.Parent != null)
+            {
+                c.Parent.Packets.Add(c);
+                c = c?.Parent;
+            }
         }
-        if (map[i][j] == 0) starts.Add((i, j));
-
-        routes.Add((i, j), directions((i, j)).Where(d => map[d.Item1][d.Item2] <= map[i][j] + 1).ToList());
-        score.Add((i, j), (int.MaxValue, int.MaxValue));
+        else
+            num += s[i];
     }
+    return c ?? new Packet();
 }
-var distanceGuess = ((int, int) n) => Math.Abs(end.Item1 - n.Item1) + Math.Abs(end.Item2 - n.Item2);
 
-var getBestPathLength = ((int, int) start) =>
+bool Ordered(Packet? l, Packet? r)
 {
-    foreach (var s in score) score[s.Key] = (int.MaxValue, int.MaxValue);
-    var from = new Dictionary<(int, int), (int, int)>();
-
-    var consider = new List<(int, int)>() { start };
-    score[start] = (0, distanceGuess(start));
-
-    //Do A*
-    while (consider.Count() != 0)
+    if (l == null) return true;
+    if (r == null) return false;
+    if (l.Empty && r.Empty) return Ordered(l.Next(), r.Next());
+    if (l.Value > -1 && r.Value > -1)
     {
-        var curr = consider.OrderBy(c => score[c].Item2).First();
-        if (curr == end) // we made it
-        {
-            var length = 1;
-            while (from.Keys.Contains(curr))
-            {
-                curr = from[curr];
-                length++;
-            }
-            return length + 1;
-        }
-        consider.Remove(curr);
-        foreach (var dir in routes[curr])
-        {
-            var newScore = score[curr].Item1 + 1;
-            if (newScore < score[dir].Item1)
-            {
-                from[dir] = curr;
-                score[dir] = (newScore, newScore + distanceGuess(dir));
-                if (!consider.Contains(dir)) consider.Add(dir);
-            }
-        }
+        if (l.Value == r.Value)
+            return Ordered(l.Next(), r.Next());
+        else
+            return l.Value < r.Value;
     }
-    return int.MaxValue;
-};
-Console.WriteLine(getBestPathLength(start));
-Console.WriteLine(starts.Select(s => getBestPathLength(s)).OrderBy(a => a).First());
+    if (l.Packets.Count > 0 && r.Packets.Count > 0)
+        return Ordered(l.Packets.First(), r.Packets.First());
+    
+    if (r.Value > -1 && l.Packets.Count > 0){ 
+        r.Packets.Add(new Packet(){Parent = r, Value = r.Value});
+        return Ordered(l.Packets.First(), r.Packets.First());
+    }
+    if (l.Value > -1 && r.Packets.Count > 0){
+        l.Packets.Add(new Packet(){Parent = l, Value = l.Value});
+        return Ordered(l.Packets.First(), r.Packets.First());
+    }
+    if (l.Packets.Count == 0 && r.Packets.Count > 0) return true;
+    if (r.Packets.Count == 0 && l.Packets.Count > 0) return false;
+    if (!l.Empty && r.Empty) return false;
+    if (l.Empty && !r.Empty) return true;
+
+    throw new Exception("oops");
+}
+
+var packets = File.ReadLines(args[0]).SplitBy(s => s == "")
+    .Select(a => (Build(a.First()), Build(a.Last()))).ToList();
+
+var sum = 0;
+for (int i = 0; i < packets.Count; i++)
+    if (Ordered(packets[i].Item1, packets[i].Item2))
+        sum += i + 1;
+
+Console.WriteLine(sum);
+
+class Packet
+{
+    public List<Packet> Packets = new List<Packet>();
+    public Packet? Parent = null;
+    public int Value = -1;
+    public int? Position = 0;
+    public Packet? Next()
+    {
+        var i = Position + 1 ?? int.MaxValue;
+        if (i >= Parent?.Packets.Count) return null;
+        return Parent?.Packets[i];
+    }
+    public bool Empty => Value == -1 && Packets.Count == 0;
+}
