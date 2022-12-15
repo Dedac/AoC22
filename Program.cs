@@ -20,14 +20,14 @@ foreach (var r in coords)
             var end = Math.Max(r[i].Item2, r[i + 1].Item2);
             for (int y = start; y <= end; y++)
                 grid[r[i].Item1, y] = 1;
-            rockBottom = Math.Max(rockBottom, end);
         }
+            rockBottom = Math.Max(rockBottom, r[i].Item2 + 2);
     }
 }
 
 int grains = 0;
 var lastGrain = false;
-while (!lastGrain && grains < 1000)
+while (!lastGrain)
 {
     grains++;
     var x = 500;
@@ -39,16 +39,16 @@ while (!lastGrain && grains < 1000)
             lastGrain = true;
             break;
         }
-        else if (grid[x, y + 1] == 0)
+        else if (grid[x, y + 1] == 0 && y+1 != rockBottom)
         {
             y += 1;
         }
-        else if (grid[x - 1, y + 1] == 0)
+        else if (grid[x - 1, y + 1] == 0 && y+1 != rockBottom)
         {
             x -= 1;
             y += 1;
         }
-        else if (grid[x + 1, y + 1] == 0)
+        else if (grid[x + 1, y + 1] == 0 && y+1 != rockBottom)
         {
             x += 1;
             y += 1;
@@ -56,13 +56,14 @@ while (!lastGrain && grains < 1000)
         else
         {
             grid[x, y] = 2;
+            if (x == 500 && y == 0) lastGrain = true;
             break;
         }
     }
 }
 
-Console.WriteLine(grains - 1);
-for (int i = 0; i <= rockBottom; i++)
+Console.WriteLine(grains);
+for (int i = 0; i <= rockBottom+3; i++)
 {
     for (int j = 480; j < 650; j++)
         Console.Write( grid[j, i] == 0 ? ' ' : grid[j,i] == 1 ? 'R' : 'o');
