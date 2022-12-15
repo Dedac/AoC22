@@ -2,6 +2,7 @@
 var coords = File.ReadLines(args[0])
                 .Select(l => l.Split(" -> ")
                     .Select(s => (int.Parse(s.Split(",").First()), int.Parse(s.Split(',').Last()))).ToArray());
+var rockBottom = 0;
 foreach (var r in coords)
 {
     for (int i = 0; i < r.Length - 1; i++)
@@ -10,24 +11,60 @@ foreach (var r in coords)
         {
             var start = Math.Min(r[i].Item1, r[i + 1].Item1);
             var end = Math.Max(r[i].Item1, r[i + 1].Item1);
-            var y = r[i].Item2;
             for (int x = start; x <= end; x++)
-                grid[x, y] = 1;
+                grid[x, r[i].Item2] = 1;
         }
-        else if (r[i].Item2 != r[i + 1].Item2)
+        else
         {
             var start = Math.Min(r[i].Item2, r[i + 1].Item2);
             var end = Math.Max(r[i].Item2, r[i + 1].Item2);
-            var x = r[i].Item1;
             for (int y = start; y <= end; y++)
-                grid[x, y] = 1;
+                grid[r[i].Item1, y] = 1;
+            rockBottom = Math.Max(rockBottom, end);
         }
     }
 }
 
-for (int i = 0; i < 10; i++)
+int grains = 0;
+var lastGrain = false;
+while (!lastGrain && grains < 1000)
 {
-    for (int j = 494; j < 504; j++)
-        Console.Write(grid[j, i]);
+    grains++;
+    var x = 500;
+    var y = 0;
+    while (true)
+    {
+        if (y >= rockBottom)
+        {
+            lastGrain = true;
+            break;
+        }
+        else if (grid[x, y + 1] == 0)
+        {
+            y += 1;
+        }
+        else if (grid[x - 1, y + 1] == 0)
+        {
+            x -= 1;
+            y += 1;
+        }
+        else if (grid[x + 1, y + 1] == 0)
+        {
+            x += 1;
+            y += 1;
+        }
+        else
+        {
+            grid[x, y] = 2;
+            break;
+        }
+    }
+}
+
+Console.WriteLine(grains - 1);
+for (int i = 0; i <= rockBottom; i++)
+{
+    for (int j = 480; j < 650; j++)
+        Console.Write( grid[j, i] == 0 ? ' ' : grid[j,i] == 1 ? 'R' : 'o');
     Console.WriteLine();
 }
