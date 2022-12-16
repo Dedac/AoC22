@@ -1,19 +1,28 @@
-﻿var area = Enumerable.Range(0, 21);
-var cleared = area.Select(s => area).ToArray();
-
-var distress = File.ReadLines(args[0])
+﻿var size = 4000001;
+var cleared = new bool[size];
+var beacons = File.ReadLines(args[0])
     .Select(s => s.Split('=').Skip(1)
-        .Select(p => int.Parse(new string(p.TakeWhile(c => char.IsDigit(c) || c == '-').ToArray()))).ToArray())
-    .Select(coords =>
-        area.Aggregate((0,0),(c, row) =>
-        {
-            var distOnRow = Math.Abs(coords[0] - coords[2]) + Math.Abs(coords[1] - coords[3]) - Math.Abs(coords[1] - row);
-            if (distOnRow >= 0)
-                cleared[row] = cleared[row].Except(Enumerable.Range(coords[0] - distOnRow, distOnRow * 2 + 1));
-            if (cleared[row].Count() == 1) 
-                c = (row,cleared[row].First());
-            return c;
-        })
-    ).Last();
+        .Select(p => int.Parse(new string(p.TakeWhile(c => char.IsDigit(c) || c == '-')
+        .ToArray()))).ToArray());
 
-Console.WriteLine(distress.Item2 * 4000000 + distress.Item1);
+int row = 0;
+int col = 0;
+for (row = 0; row < size; row++)
+{
+    foreach (var coords in beacons)
+    {
+        var distance = Math.Abs(coords[0] - coords[2]) + Math.Abs(coords[1] - coords[3]);
+        {
+            var distOnRow = distance - Math.Abs(coords[1] - row);
+            var start = Math.Max(coords[0] - distOnRow, 0);
+            var end = Math.Min(start + distOnRow * 2 + 1, size);
+            for (col = start; col < end; col++)
+                cleared[col] = true;
+        }
+    }
+    if (!cleared.All(c=>c)) break;
+    cleared = new bool[size];
+}
+var i = 0;
+while(cleared[i]) i++;
+Console.WriteLine(i * 4000000 + row);
