@@ -6,61 +6,67 @@
         {
             name = p[1],
             rate = int.Parse(p[4].Split(new char[] { '=', ';' })[1]),
-            tunnels = p[9..].Select(x => x.Split(",")[0]).ToArray()
+            tunnels = p[9..].Select(x => x.Split(",")[0])
         };
     }).ToDictionary((r) => r.name);
 
-var score = new Dictionary<(string, bool), (int, int)>();
+var score = new Dictionary<(string, bool, int), (int, int)>();
 foreach (var r in rooms)
 {
-    score[(r.Key, false)] = (-1,-1);
-    score[(r.Key, true)] = (-1,-1);
+    for (int m = 0; m < 30; m++)
+    {
+        score[(r.Key, false, m)] = (-1, -1);
+        score[(r.Key, true, m)] = (-1, -1);
+    }
 }
 
 //TODO: heuristic function should be all unopened valves at 2 minutes per?
 var distanceGuess = (string s) => 0;
 
-var from = new Dictionary<(string, bool), (string, bool)>();
-var consider = new List<(string, bool)>() { ("AA", false) };
-score[("AA", false)] = (0, distanceGuess("AA"));
-var path = new List<(string, bool)>();
-//Do A*
+var from = new Dictionary<(string, bool, int), (string, bool, int)>();
+var consider = new List<(string, bool, int)>() { ("AA", false, 30) };
+score[("AA", false, 30)] = (0, distanceGuess("AA"));
+var path = new List<(string, bool, int)>();
+
 while (consider.Count() != 0)
 {
-    var curr = consider.OrderBy(c => score[c].Item2).First();
-    if (from.Sum(f => f.Value.Item2 ? 2 : 1) == 30)  //TODO: fix end condition?
-    {
-        while (from.Keys.Contains(curr))
-        {
-            path.Add(curr);
-            curr = from[curr];
-        }
-        break;
-    }
+    var curr = consider.OrderByDescending(c => score[c].Item2).First();
+    
+    path = new List<(string, bool, int)>();
     consider.Remove(curr);
+    if (curr.Item3 == 0) continue;
+    var pather = curr;
+    path.Add(curr);
+    while (curr != ("AA", false, 30) && from[path.LastOrDefault()] != ("AA", false, 30))
+    {
+        pather = from[pather];
+        path.Add(pather);
+    }
     foreach (var tunnel in rooms[curr.Item1].tunnels)
     {
-        var dirs = new List<(string, bool)> { (tunnel, false) };
-        if (rooms[tunnel].rate > 0) dirs.Add((tunnel, true));
+        var dirs = new List<(string, bool, int)> { (tunnel, false, curr.Item3 - 1) };
+        if (rooms[tunnel].rate > 0 && curr.Item3 > 1 &&
+         !path.Any(p => p.Item1 == tunnel && p.Item2)) 
+            dirs.Add((tunnel, true, curr.Item3 - 2));
         foreach (var dir in dirs)
         {
-            //Score should be rate added * time remaining over time taken?
-            var newScore = score[curr].Item1 + 1;
+            var newScore = score[curr].Item1 + (dir.Item2 ? rooms[dir.Item1].rate * dir.Item3 : 0);
             if (newScore > score[dir].Item1)
             {
-                from[dir] = curr; 
+                from[dir] = curr;
                 score[dir] = (newScore, newScore + distanceGuess(tunnel));
                 if (!consider.Contains(dir)) consider.Add(dir);
             }
         }
     }
 }
-var i = path.GetEnumerator();
-var totalFlow = 0;
-for (int t = 30; t == 0; t--)
-{
-    //TODO bug on when the flow starts? (t-1?)
-    i.MoveNext();
-    if (i.Current.Item2) totalFlow += rooms[i.Current.Item1].rate * t;
-}
-Console.WriteLine(totalFlow);
+var lastStop = score.Aggregate(score.First(),(m, s) => m = s.Value.Item1 > m.Value.Item1 ? s : m );
+
+var finalPath = new List<KeyValuePair<(string, bool, int), (int, int)>>();
+finalPath.Add(lastStop);
+while (from[finalPath.LastOrDefault().Key] != ("AA", false, 30))
+    {
+        lastStop = new (from[lastStop.Key], score[from[lastStop.Key]]);
+        finalPath.Add(lastStop);
+    }
+Console.WriteLine(lastStop.Value.Item1);
