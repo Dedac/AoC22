@@ -10,63 +10,44 @@
         };
     }).ToDictionary((r) => r.name);
 
-var score = new Dictionary<(string, bool, int), (int, int)>();
-foreach (var r in rooms)
-{
-    for (int m = 0; m < 30; m++)
-    {
-        score[(r.Key, false, m)] = (-1, -1);
-        score[(r.Key, true, m)] = (-1, -1);
-    }
-}
+var score = new Dictionary<Visit, int>();
 
-//TODO: heuristic function should be all unopened valves at 2 minutes per?
+//TODO: heuristic function should be all unopened valves in value order at 2 minutes per?
+//Function required to be lower is better for priority queue
 var distanceGuess = (string s) => 0;
 
-var from = new Dictionary<(string, bool, int), (string, bool, int)>();
-var consider = new List<(string, bool, int)>() { ("AA", false, 30) };
-score[("AA", false, 30)] = (0, distanceGuess("AA"));
-var path = new List<(string, bool, int)>();
+var from = new Dictionary<Visit, Visit>();
+var consider = new PriorityQueue<Visit, int>();
+consider.Enqueue(new("AA", false, 30, ""), distanceGuess(""));
 
-while (consider.Count() != 0)
+score[new("AA", false, 30, "")] = 0;
+
+while (consider.Count != 0)
 {
-    var curr = consider.OrderByDescending(c => score[c].Item2).First();
+    var curr = consider.Dequeue();
+    if (curr.timeRemaining == 0) continue;
     
-    path = new List<(string, bool, int)>();
-    consider.Remove(curr);
-    if (curr.Item3 == 0) continue;
-    var pather = curr;
-    path.Add(curr);
-    while (curr != ("AA", false, 30) && from[path.LastOrDefault()] != ("AA", false, 30))
+    foreach (var tunnel in rooms[curr.name].tunnels)
     {
-        pather = from[pather];
-        path.Add(pather);
-    }
-    foreach (var tunnel in rooms[curr.Item1].tunnels)
-    {
-        var dirs = new List<(string, bool, int)> { (tunnel, false, curr.Item3 - 1) };
-        if (rooms[tunnel].rate > 0 && curr.Item3 > 1 &&
-         !path.Any(p => p.Item1 == tunnel && p.Item2)) 
-            dirs.Add((tunnel, true, curr.Item3 - 2));
+        var dirs = new List<Visit> { new(tunnel, false, curr.timeRemaining - 1, curr.openedValves) };
+        if (rooms[tunnel].rate > 0 && curr.timeRemaining > 1 &&
+         !curr.openedValves.Split(',').Any(p => p == tunnel)) 
+            dirs.Add(new(tunnel, true, curr.timeRemaining - 2, curr.openedValves + "," + tunnel));
         foreach (var dir in dirs)
         {
-            var newScore = score[curr].Item1 + (dir.Item2 ? rooms[dir.Item1].rate * dir.Item3 : 0);
-            if (newScore > score[dir].Item1)
+            var newScore = score[curr] + (dir.open ? rooms[dir.name].rate * dir.timeRemaining : 0);
+            if (!score.ContainsKey(dir) || newScore > score[dir])
             {
                 from[dir] = curr;
-                score[dir] = (newScore, newScore + distanceGuess(tunnel));
-                if (!consider.Contains(dir)) consider.Add(dir);
+                score[dir] = newScore;
+                //Enque should be current score - guess?
+                if (!consider.UnorderedItems.Any(ci => ci.Element == dir)) consider.Enqueue(dir, distanceGuess(dir.openedValves));
             }
         }
     }
 }
-var lastStop = score.Aggregate(score.First(),(m, s) => m = s.Value.Item1 > m.Value.Item1 ? s : m );
+var lastStop = score.Aggregate(score.First(),(m, s) => m = s.Value > m.Value ? s : m );
 
-var finalPath = new List<KeyValuePair<(string, bool, int), (int, int)>>();
-finalPath.Add(lastStop);
-while (from[finalPath.LastOrDefault().Key] != ("AA", false, 30))
-    {
-        lastStop = new (from[lastStop.Key], score[from[lastStop.Key]]);
-        finalPath.Add(lastStop);
-    }
-Console.WriteLine(lastStop.Value.Item1);
+Console.WriteLine(lastStop.Value);
+
+record Visit ( string name, bool open, int timeRemaining, string openedValves);
