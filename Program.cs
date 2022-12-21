@@ -6,48 +6,50 @@
         {
             name = p[1],
             rate = int.Parse(p[4].Split(new char[] { '=', ';' })[1]),
-            tunnels = p[9..].Select(x => x.Split(",")[0])
+            tunnels = p[9..].Select(x => x.Split(",")[0]).ToList()
         };
     }).ToDictionary((r) => r.name);
 
 var score = new Dictionary<Visit, int>();
-
-//TODO: heuristic function should be all unopened valves in value order at 2 minutes per?
-//Function required to be lower is better for priority queue
-var distanceGuess = (string s) => 0;
-
 var from = new Dictionary<Visit, Visit>();
-var consider = new PriorityQueue<Visit, int>();
-consider.Enqueue(new("AA", false, 30, ""), distanceGuess(""));
+var consider = new List<Visit>();
+consider.Add(new("AA", false, 30, ""));
 
 score[new("AA", false, 30, "")] = 0;
 
 while (consider.Count != 0)
 {
-    var curr = consider.Dequeue();
+    var curr = consider.Last();
+    consider.Remove(curr);
+
+    //out of time
     if (curr.timeRemaining == 0) continue;
-    
-    foreach (var tunnel in rooms[curr.name].tunnels)
+    //can't open more valves
+    if (curr.openedValves.Split(',').Count() > rooms.Count(s => s.Value.rate > 0)) continue;
+
+    //Don't add tunnels that take us immediately backward
+    foreach (var tunnel in rooms[curr.name].tunnels.Where(t => t != curr.name))
     {
         var dirs = new List<Visit> { new(tunnel, false, curr.timeRemaining - 1, curr.openedValves) };
         if (rooms[tunnel].rate > 0 && curr.timeRemaining > 1 &&
-         !curr.openedValves.Split(',').Any(p => p == tunnel)) 
+         !curr.openedValves.Split(',').Any(p => p == tunnel))
             dirs.Add(new(tunnel, true, curr.timeRemaining - 2, curr.openedValves + "," + tunnel));
+
         foreach (var dir in dirs)
         {
             var newScore = score[curr] + (dir.open ? rooms[dir.name].rate * dir.timeRemaining : 0);
+
             if (!score.ContainsKey(dir) || newScore > score[dir])
             {
                 from[dir] = curr;
                 score[dir] = newScore;
-                //Enque should be current score - guess?
-                if (!consider.UnorderedItems.Any(ci => ci.Element == dir)) consider.Enqueue(dir, distanceGuess(dir.openedValves));
+                if (!consider.Contains(dir)) consider.Add(dir);
             }
         }
     }
 }
-var lastStop = score.Aggregate(score.First(),(m, s) => m = s.Value > m.Value ? s : m );
+var lastStop = score.Aggregate(score.First(), (m, s) => m = s.Value > m.Value ? s : m);
 
 Console.WriteLine(lastStop.Value);
 
-record Visit ( string name, bool open, int timeRemaining, string openedValves);
+record Visit(string name, bool open, int timeRemaining, string openedValves);
